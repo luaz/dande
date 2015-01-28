@@ -1,2 +1,2 @@
-# dande
-Dandelion: Text-base Game
+# Dandelion
+Text-based Game
