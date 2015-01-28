@@ -5,10 +5,11 @@ import (
 	"bytes"
 	"io"
 	"log"
-	"math/rand"
+	//"math/rand"
 	"net"
 	"os"
-	"time"
+	"strings"
+	//"time"
 )
 
 var (
@@ -22,27 +23,54 @@ func initialize() {
 }
 
 func handle_command(conn net.Conn, input chan string) {
-	for {
-		line := <-input
-		log.Print(line)
-		min := 1000
-		max := 5000
-		num := rand.Intn(max-min) + min
-		time.Sleep(time.Duration(num) * time.Millisecond)
-
-		send_output(conn, "> "+line)
-	}
-}
-
-func handle_input(conn net.Conn, input chan string) {
 	defer close(input)
 	defer conn.Close()
 
 	for {
+		line := <-input
+		line = strings.TrimSpace(line)
+		/*
+			log.Print(line)
+			min := 1000
+			max := 5000
+			num := rand.Intn(max-min) + min
+			time.Sleep(time.Duration(num) * time.Millisecond)
+		*/
+		i := strings.Index(line, " ")
+		var command, message string
+		if i != -1 {
+			command = line[:i]
+			//param := line[i+1:]
+		} else {
+			command = line
+		}
+
+		switch command {
+		case "quit":
+			message = "Bye!"
+			break
+		default:
+			message = "I don't understand ..."
+		}
+
+		send_output(conn, "> "+message+"\n")
+		if message == "Bye!" {
+			break
+		}
+	}
+
+	log.Print("connection end")
+}
+
+func handle_input(conn net.Conn, input chan string) {
+	//defer close(input)
+	//defer conn.Close()
+
+	for {
 		line, err := bufio.NewReader(conn).ReadBytes('\n')
 		if err != nil {
-			Error.Println("Read error", err)
-			return
+			//Error.Println("Read error", err)
+			break
 		}
 		input <- string(line)
 	}
@@ -55,6 +83,7 @@ func send_output(conn net.Conn, line string) {
 func main() {
 	initialize()
 
+	log.Print("listening on 5994 ...")
 	sock, err := net.Listen("tcp", ":5994")
 	if err != nil {
 		Error.Println("Listen error", err)
@@ -68,6 +97,7 @@ func main() {
 			continue
 		}
 
+		log.Print("connection start")
 		channel := make(chan string, 10)
 		go handle_input(conn, channel)
 		go handle_command(conn, channel)
